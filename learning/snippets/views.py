@@ -14,6 +14,7 @@ from .permission import Danger
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.reverse import reverse
 from rest_framework import renderers
+from django.contrib.sessions.models import Session
 
 '''@csrf_exempt
 
@@ -199,8 +200,28 @@ class SnippetHighlight(generics.GenericAPIView):
     renderer_classes = [renderers.StaticHTMLRenderer]
 
     def get(self, request, *args, **kwargs):
+        if not request.session.get('username'):
+            request.session['username'] = request.user.username
+        self.get_session_id(request)
         snippet = self.get_object()
         return Response(snippet.highlited)
+    
+    def get_session_id(self, request):
+        if not request.session.session_key:
+            request.session.save()
+        session_id = request.session.session_key
+        username = request.session.get('username')
+        session = Session.objects.get(session_key = session_id)
+        session_data = session.get_decoded()
+        user_id = session_data.get('_auth_user_id')
+        if user_id:
+            user = Snippet.objects.get(id = user_id)
+            username = user.owner
+        
+        print(session_id,username)
+
+        
+
 
 
 
